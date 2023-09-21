@@ -165,7 +165,6 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, recipe, validated_data):
-        # Обновление основных полей рецепта
         recipe.image = validated_data.get('image', recipe.image)
         recipe.name = validated_data.get('name', recipe.name)
         recipe.text = validated_data.get('text', recipe.text)
@@ -173,40 +172,33 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             'cooking_time', recipe.cooking_time
         )
 
-        # Обновление тегов
         tags_data = validated_data.get('tags', [])
         recipe.tags.set(tags_data)
 
-        # Удаление и обновление ингредиентов
         ingredients = validated_data.get('ingredients', [])
         IngredientInRecipe.objects.filter(recipe=recipe).delete()
         self.create_ingredients_in_recipe(recipe, ingredients)
 
-        # Сохранение обновленного рецепта
         recipe.save()
 
         return recipe
 
     def validate(self, attrs):
-        # Проверка наличия хотя бы одного выбранного тега
         tags = attrs.get('tags')
         if not tags:
             raise serializers.ValidationError(
                 'Выберите хотя бы один тег для рецепта.'
             )
 
-        # Проверка уникальности тегов
         if len(set(tags)) != len(tags):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
-        # Проверка наличия хотя бы одного выбранного ингредиента
         ingredients_data = attrs.get('ingredients')
         if not ingredients_data:
             raise serializers.ValidationError(
                 'Выберите хотя бы один ингредиент для рецепта.'
             )
 
-        # Проверка уникальности ингредиентов
         ingredient_ids = [ingredient['id'] for ingredient in ingredients_data]
         if len(set(ingredient_ids)) != len(ingredient_ids):
             raise serializers.ValidationError(

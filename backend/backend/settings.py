@@ -1,19 +1,18 @@
 # flake8: noqa
 import os
-from datetime import timedelta
 from pathlib import Path
-
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = '54kzl&^5pzep&j0_35-=exp+k2u2geq6jjx*0dc!@hnqr1k7^5'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['158.160.67.18', '127.0.0.1', 'localhost', 'foodgramdrsif.servegame.com']
 
 AUTH_USER_MODEL = 'users.User'
 

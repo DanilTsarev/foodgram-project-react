@@ -26,8 +26,8 @@ class UserAdmin(admin.ModelAdmin):
         'is_superuser',
     )
     list_editable = ('first_name', 'last_name', 'is_superuser')
-    search_fields = ('username',)
-    list_filter = ('username',)
+    search_fields = ('username', 'email',)
+    list_filter = ('username', 'email',)
     empty_value_display = '-пусто-'
 
 
@@ -38,16 +38,21 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'image',
         'cooking_time',
+        'tags_2',
+        'favorite',
     )
     list_editable = ('image',)
-    search_fields = ('author__username',)
-    list_filter = ('author',)
+    search_fields = ('author', 'name', 'tags_2')
+    list_filter = ('name', 'author', 'tags',)
     empty_value_display = '-пусто-'
 
-    def tags_display(self, obj):
-        return ', '.join([tag.name for tag in obj.tags.all()])
+    @admin.display(description='теги')
+    def tags_2(self, recipe):
+        return [tag.name for tag in recipe.tags.all()]
 
-    tags_display.short_description = 'Tags'
+    @admin.display(description='Кол-во добавления в избранное')
+    def favorite(self, recipe):
+        return recipe.favorites.count()
 
 
 class IngredientResource(resources.ModelResource):

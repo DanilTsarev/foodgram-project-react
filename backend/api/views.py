@@ -1,15 +1,6 @@
-from io import BytesIO
-from pathlib import Path
-
-from django.db.models import Sum
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -19,14 +10,7 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
-from recipe.models import (
-    Favourite,
-    Ingredient,
-    IngredientInRecipe,
-    Recipe,
-    ShoppingCart,
-    Tag,
-)
+from recipe.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
@@ -41,6 +25,7 @@ from .serializers import (
     TakeRecipeSerializer,
     UserSerializer,
 )
+from .utils import generate_shopping_cart_pdf
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -121,49 +106,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         user = request.user
-        ingredients = (
-            IngredientInRecipe.objects.filter(recipe__shopping_cart__user=user)
-            .values_list('ingredient__name', 'ingredient__measurement_unit')
-            .order_by('ingredient__name')
-            .annotate(ingredient_sum=Sum('amount'))
-        )
-
-        buffer = BytesIO()
-
-        font_path = (
-            Path(__file__).resolve().parent / 'front' / 'arialmt.ttf'
-        ).resolve()
-
-        pdfmetrics.registerFont(TTFont('arialmt', font_path))
-
-        p = canvas.Canvas(buffer, pagesize=letter)
-        p.setFont('arialmt', 12)
-
-        title = 'Корзина покупок'
-        title_font = 'arialmt'
-        title_size = 24
-        p.setFont(title_font, title_size)
-        title_width = p.stringWidth(title, title_font, title_size)
-        title_x = (letter[0] - title_width) / 2
-        title_y = 750
-        p.drawString(title_x, title_y, title)
-
-        y = 700
-        for ingredient in ingredients:
-            name, measurement_unit, amount = (
-                ingredient[0],
-                ingredient[1],
-                ingredient[2],
-            )
-            y -= 20
-            p.drawString(100, y, f'{name} - {amount} {measurement_unit}')
-
-        p.showPage()
-        p.save()
-
-        buffer.seek(0)
-        response = HttpResponse(content_type='application/pdf')
-
+        response = generate_shopping_cart_pdf(user)
         return response
 
 
@@ -188,20 +131,11 @@ class UserViewSet(DjoserUserViewSet):
         user = request.user
         author = get_object_or_404(User, id=kwargs.get('id'))
         if request.method == 'POST':
-            if user == author:
-                return Response(
-                    {'errors': 'Вы не можете подписываться на самого себя'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if Follow.objects.filter(user=user, author=author).exists():
-                return Response(
-                    {'errors': 'Вы уже подписаны на данного пользователя'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
             subscribe = Follow.objects.create(user=user, author=author)
             serializer = self.additional_serializer(
                 subscribe, context={'request': request}
             )
+            serializer.is_valid(raise_exception=True)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if user == author:
@@ -218,12 +152,7 @@ class UserViewSet(DjoserUserViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    @action(methods=['GET'], detail=False)
+    @action(methods=['GET'], detail=False, permission_classes=(IsAuthenticated,))
     def me(self, request):
-        if request.user.is_authenticated:
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
-        else:
-            return Response(
-                {'detail': 'Пользователь не авторизован'}, status=401
-            )
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)

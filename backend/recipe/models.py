@@ -4,11 +4,12 @@ from django.db import models
 from django.db.models import UniqueConstraint
 
 from users.models import User
+from .const import MAX_LENGTH, MAX_LENGTH_HEX
 
 
 class Ingredient(models.Model):
-    name = models.CharField('Ингредиент', max_length=200)
-    measurement_unit = models.CharField('Единица измерения', max_length=200)
+    name = models.CharField('Ингредиент', max_length=MAX_LENGTH)
+    measurement_unit = models.CharField('Единица измерения', max_length=MAX_LENGTH)
 
     class Meta:
         verbose_name = 'Ингредиент'
@@ -26,12 +27,12 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField('Название', unique=True, max_length=200)
+    name = models.CharField('Название', unique=True, max_length=MAX_LENGTH)
     color = ColorField(
         unique=True,
-        max_length=7,
+        max_length=MAX_LENGTH_HEX,
     )
-    slug = models.SlugField('Класс блюда', unique=True, max_length=200)
+    slug = models.SlugField('Класс блюда', unique=True, max_length=MAX_LENGTH)
 
     class Meta:
         verbose_name = 'Тег'
@@ -43,7 +44,7 @@ class Tag(models.Model):
 
 
 class Recipe(models.Model):
-    name = models.CharField('Название рецепта', max_length=200)
+    name = models.CharField('Название рецепта', max_length=MAX_LENGTH)
 
     author = models.ForeignKey(
         User,

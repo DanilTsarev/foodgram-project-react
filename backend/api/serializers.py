@@ -1,6 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
+from django.db import transaction
 
 from recipe.models import Ingredient, IngredientInRecipe, Recipe, Tag
 from users.models import Follow, User
@@ -48,9 +49,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if not request.user.is_authenticated:
-            return False
-        return request.user.follower.filter(author=obj).exists()
+        return request.user.is_authenticated and request.user.follower.filter(author=obj).exists()
 
 
 class IngredientTakeRecipeSerializer(serializers.ModelSerializer):
@@ -129,7 +128,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     image = Base64ImageField(represent_in_base64=True)
     cooking_time = serializers.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(999)]
+        validators=[
+            MinValueValidator(1, message="Минимальное значение: 1"),
+            MaxValueValidator(999, message="Максимальное значение: 999")
+        ]
     )
 
     class Meta:
@@ -156,14 +158,16 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             ]
         )
 
+    @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        recipe = Recipe.objects.create(**validated_data)
+        recipe = super().create(validated_data)
         recipe.tags.set(tags)
         self.create_ingredients_in_recipe(recipe, ingredients_data)
         return recipe
 
+    @transaction.atomic
     def update(self, recipe, validated_data):
         recipe.image = validated_data.get('image', recipe.image)
         recipe.name = validated_data.get('name', recipe.name)
@@ -179,7 +183,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         IngredientInRecipe.objects.filter(recipe=recipe).delete()
         self.create_ingredients_in_recipe(recipe, ingredients)
 
-        recipe.save()
+        super().update(recipe, validated_data)
 
         return recipe
 
@@ -259,8 +263,21 @@ class FollowListSerializer(UserSerializer):
         limit = request.GET.get('recipes_limit')
         queryset = Recipe.objects.filter(author=obj.author)
         if limit:
-            queryset = queryset[: int(limit)]
+            queryset = queryset[:int(limit)]
         return RecipeSubscribeSerializer(queryset, many=True).data
+
+    def validate(self, attrs):
+        author = attrs.get('author')
+        user = attrs.get('user')
+        if author == user:
+            raise serializers.ValidationError(
+                'Вы не можете подписываться на самого себя',
+            )
+        if user.following.filter(author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на данного пользователя',
+            )
+        return attrs
 
 
 class AddInFavouriteSerializer(serializers.ModelSerializer):

@@ -54,7 +54,9 @@ def generate_shopping_cart_pdf(user):
 
     buffer.seek(0)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
+    response[
+        'Content-Disposition'
+    ] = 'attachment; filename="shopping_cart.pdf"'
     response.write(buffer.read())
 
     return response

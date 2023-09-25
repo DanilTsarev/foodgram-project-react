@@ -4,12 +4,15 @@ from django.db import models
 from django.db.models import UniqueConstraint
 
 from users.models import User
+
 from .const import MAX_LENGTH, MAX_LENGTH_HEX
 
 
 class Ingredient(models.Model):
     name = models.CharField('Ингредиент', max_length=MAX_LENGTH)
-    measurement_unit = models.CharField('Единица измерения', max_length=MAX_LENGTH)
+    measurement_unit = models.CharField(
+        'Единица измерения', max_length=MAX_LENGTH
+    )
 
     class Meta:
         verbose_name = 'Ингредиент'

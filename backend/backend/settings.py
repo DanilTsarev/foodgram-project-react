@@ -1,6 +1,7 @@
 # flake8: noqa
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 env_path = Path(__file__).resolve().parent.parent / '.env'
@@ -12,7 +13,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['158.160.67.18', '127.0.0.1', 'localhost', 'foodgramdrsif.servegame.com']
+ALLOWED_HOSTS = [
+    '158.160.67.18',
+    '127.0.0.1',
+    'localhost',
+    'foodgramdrsif.servegame.com',
+]
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -133,4 +139,3 @@ DJOSER = {
         'user_create': 'djoser.serializers.UserCreateSerializer',
     },
 }
-

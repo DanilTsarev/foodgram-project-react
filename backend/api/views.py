@@ -152,7 +152,9 @@ class UserViewSet(DjoserUserViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    @action(methods=['GET'], detail=False, permission_classes=(IsAuthenticated,))
+    @action(
+        methods=['GET'], detail=False, permission_classes=(IsAuthenticated,)
+    )
     def me(self, request):
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)

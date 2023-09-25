@@ -1,7 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import transaction
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from django.db import transaction
 
 from recipe.models import Ingredient, IngredientInRecipe, Recipe, Tag
 from users.models import Follow, User
@@ -49,7 +49,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        return request.user.is_authenticated and request.user.follower.filter(author=obj).exists()
+        return (
+            request.user.is_authenticated
+            and request.user.follower.filter(author=obj).exists()
+        )
 
 
 class IngredientTakeRecipeSerializer(serializers.ModelSerializer):
@@ -130,7 +133,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     cooking_time = serializers.IntegerField(
         validators=[
             MinValueValidator(1, message="Минимальное значение: 1"),
-            MaxValueValidator(999, message="Максимальное значение: 999")
+            MaxValueValidator(999, message="Максимальное значение: 999"),
         ]
     )
 
@@ -263,7 +266,7 @@ class FollowListSerializer(UserSerializer):
         limit = request.GET.get('recipes_limit')
         queryset = Recipe.objects.filter(author=obj.author)
         if limit:
-            queryset = queryset[:int(limit)]
+            queryset = queryset[: int(limit)]
         return RecipeSubscribeSerializer(queryset, many=True).data
 
     def validate(self, attrs):

@@ -26,8 +26,14 @@ class UserAdmin(admin.ModelAdmin):
         'is_superuser',
     )
     list_editable = ('first_name', 'last_name', 'is_superuser')
-    search_fields = ('username', 'email',)
-    list_filter = ('username', 'email',)
+    search_fields = (
+        'username',
+        'email',
+    )
+    list_filter = (
+        'username',
+        'email',
+    )
     empty_value_display = '-пусто-'
 
 
@@ -43,7 +49,11 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_editable = ('image',)
     search_fields = ('author', 'name', 'tags_2')
-    list_filter = ('name', 'author', 'tags',)
+    list_filter = (
+        'name',
+        'author',
+        'tags',
+    )
     empty_value_display = '-пусто-'
 
     @admin.display(description='теги')

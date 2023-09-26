@@ -149,7 +149,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             'tags',
         )
 
-    def create_ingredients_in_recipe(self, recipe, ingredients):
+    @staticmethod
+    def create_ingredients_in_recipe(recipe, ingredients):
         IngredientInRecipe.objects.bulk_create(
             [
                 IngredientInRecipe(
@@ -172,13 +173,6 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, recipe, validated_data):
-        recipe.image = validated_data.get('image', recipe.image)
-        recipe.name = validated_data.get('name', recipe.name)
-        recipe.text = validated_data.get('text', recipe.text)
-        recipe.cooking_time = validated_data.get(
-            'cooking_time', recipe.cooking_time
-        )
-
         tags_data = validated_data.get('tags', [])
         recipe.tags.set(tags_data)
 

@@ -2,12 +2,14 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import UniqueConstraint
 
+from recipe.const import MAX_LENGTH_EMAIL, MAX_LENGTH_USER
+
 
 class User(AbstractUser):
     username = models.CharField(
         'Ник пользователя',
         help_text='Ник пользователя',
-        max_length=150,
+        max_length=MAX_LENGTH_USER,
         blank=False,
         unique=True,
     )
@@ -16,19 +18,19 @@ class User(AbstractUser):
         help_text='Электронная почта пользователя',
         blank=False,
         unique=True,
-        max_length=254,
+        max_length=MAX_LENGTH_EMAIL,
     )
     first_name = models.CharField(
         'Имя',
         help_text='Имя пользователя',
-        max_length=150,
+        max_length=MAX_LENGTH_USER,
         blank=True,
         null=True,
     )
     last_name = models.CharField(
         'Фамилия',
         help_text='Фамилия пользователя',
-        max_length=150,
+        max_length=MAX_LENGTH_USER,
         blank=True,
         null=True,
     )

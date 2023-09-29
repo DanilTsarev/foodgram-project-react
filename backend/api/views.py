@@ -19,6 +19,7 @@ from .permissions import IsOwnerOrReadOnly
 from .serializers import (
     AddInFavouriteSerializer,
     CreateRecipeSerializer,
+    FollowingSerializer,
     FollowListSerializer,
     IngredientSerializer,
     TagSerializer,
@@ -131,11 +132,12 @@ class UserViewSet(DjoserUserViewSet):
         user = request.user
         author = get_object_or_404(User, id=kwargs.get('id'))
         if request.method == 'POST':
-            subscribe = Follow.objects.create(user=user, author=author)
-            serializer = self.additional_serializer(
-                subscribe, context={'request': request}
+            subscribe = {'user': user.id, 'author': author.id}
+            serializer = FollowingSerializer(
+                data=subscribe, context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if user == author:

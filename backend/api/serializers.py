@@ -2,6 +2,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from recipe.models import Ingredient, IngredientInRecipe, Recipe, Tag
 from users.models import Follow, User
@@ -168,20 +169,23 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         recipe = super().create(validated_data)
         recipe.tags.set(tags)
-        self.create_ingredients_in_recipe(recipe, ingredients_data)
+        CreateRecipeSerializer.create_ingredients_in_recipe(
+            recipe, ingredients_data
+        )
         return recipe
 
     @transaction.atomic
     def update(self, recipe, validated_data):
-        tags_data = validated_data.get('tags', [])
-        recipe.tags.set(tags_data)
-
-        ingredients = validated_data.get('ingredients', [])
-        IngredientInRecipe.objects.filter(recipe=recipe).delete()
-        self.create_ingredients_in_recipe(recipe, ingredients)
-
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+        recipe = super().update(recipe, validated_data)
+        recipe.tags.clear()
+        recipe.tags.set(tags)
+        recipe.ingredients.clear()
+        CreateRecipeSerializer.create_ingredients_in_recipe(
+            recipe, ingredients
+        )
         super().update(recipe, validated_data)
-
         return recipe
 
     def validate(self, attrs):
@@ -260,21 +264,8 @@ class FollowListSerializer(UserSerializer):
         limit = request.GET.get('recipes_limit')
         queryset = Recipe.objects.filter(author=obj.author)
         if limit:
-            queryset = queryset[:int(limit)]
+            queryset = queryset[: int(limit)]
         return RecipeSubscribeSerializer(queryset, many=True).data
-
-    def validate(self, attrs):
-        author = attrs.get('author')
-        user = attrs.get('user')
-        if author == user:
-            raise serializers.ValidationError(
-                'Вы не можете подписываться на самого себя',
-            )
-        if user.following.filter(author=author).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на данного пользователя',
-            )
-        return attrs
 
 
 class AddInFavouriteSerializer(serializers.ModelSerializer):
@@ -286,3 +277,29 @@ class AddInFavouriteSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
         read_only_fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class FollowingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = (
+            'user',
+            'author',
+        )
+
+    def validate(self, follow):
+        if follow.get('user') == follow.get('author'):
+            raise ValidationError('Вы не можете подписываться на самого себя')
+
+        if Follow.objects.filter(
+            user=follow.get('user'), author=follow.get('author')
+        ).exists():
+            raise ValidationError('Вы уже подписаны на данного пользователя')
+
+        return follow
+
+    def to_representation(self, instance):
+        return FollowListSerializer(
+            instance,
+            context={'request': self.context.get('request')},
+        ).data
